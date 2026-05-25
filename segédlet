@@ -1,0 +1,329 @@
+CISCO gyakorlati segédlet
+
+CCNA II témakörökhöz
+
+SWITCH
+Indítófájlok:
+//boot információk, változók lekérdezése:
+S1#show bootvar
+vagy (verziófüggő)
+S1#show boot
+//indítófájl beállítása:
+S1(config)# boot system indítófájl_elérése
+Jelszó visszaállítás rommon módban:
+switch: flash_init
+switch: load_helper
+switch: dir flash:
+switch: rename flash:config.text flash:config.old
+switch: boot
+Switch konfiguráció törlése:
+S1# delete flash:vlan.dat
+S1# erase startup-config
+Vlan létrehozása/hozzárandelése:
+S1(config)# vlan vlan_azonosító
+S1(config-vlan)# name vlan_név
+S1(config-vlan)# exit
+S1(config)# interface range interfésztípus_kezdő azonosító - végső azonosító
+S1(config-if)# switchport mode access
+S1(config-if)# switchport access vlan vlan_azonosító
+S1(config-vlan)# exit
+S1#show vlan brief
+S1# show interfaces int_azon switchport
+Vlan trönk létrehozása:
+S1(config)# interface int_ azonosító
+S1(config-if)# switchport mode trunk
+S1(config-if)# switchport trunk native vlan vlan_id
+S1(config-if)# switchport trunk allow vlan vlan_id_lista
+//DTP üzenetek kikapcsolása:
+S1(config-if)# switchport nonegotiate
+S1# show interfaces trunk
+S1# show interfaces int_azon switchport
+
+PVlan Edge:
+S1(config)# interface int_ azonosító
+//protected portok nem kommunikálnak egymással:
+S1(config-if)# switchport protected
+S1# show interfaces int_azon switchport
+Management interface:
+S1(config)# vlan 99
+S1(config-vlan)# name Management
+S1(config)# interface vlan 99
+S1(config-if)# ip address ip_cím alhálózati_maszk
+Alapértelmezett átjáró:
+S1(config)# ip default-gateway átjáró_ip_címe
+Dinamikus trönk protokoll (DTP):
+S1(config-if)# switchport mode dynamic desirable
+S1(config-if)# switchport mode dynamic auto
+S1(config-if)# no switchport nonegotiate
+Feszítőfa protokoll (STP):
+//mód beállítás:
+SW1(config)# spanning-tree mode pvst
+SW1(config)# spanning-tree mode rapid-pvst
+//root-bridge prioritás:
+SW1(config)# spanning-tree vlan vlan_azonosító root primary
+SW1(config)# spanning-tree vlan vlan_azonosító root secondary
+vagy
+SW1(config)# spanning-tree vlan vlan_azonosító priority 0
+SW1(config)# spanning-tree vlan vlan_azonosító priority 4096
+megj.: 4096-os léptékben növelhető 0-61440 között
+//port útvonal-költsége:
+SW1(config-if)# spanning-tree vlan vlan_azonosító cost költség_érték
+//Portfast bekapcsolás minden portra:
+SW1(config)# spanning-tree portfast default
+//BPDU guard bekapcsolása minden portfast portra:
+SW1(config)# spanning-tree portfast bpduguard default
+
+DHCP támadások kivédése:
+S1(config)# ip dhcp snooping
+S1(config)# ip dhcp snooping vlan vlan_id1, vlan_id2…
+S1(config)# interface int_azonosító_megbízható
+S1(config-if)# ip dhcp snooping trust
+S1(config-if)# interface range int_kezdőazonosító – végazonosító //nem megbízható
+
+S1(config-if-range)# ip dhcp snooping limit rate kérések_száma
+S1# show ip dhcp snooping
+Portbiztonság beállítása:
+S1(config)# interface int_azonosító
+S1(config-if)# switchport mode access
+S1(config-if)# switchport port-security
+S1(config-if)# switchport port-security maximum MAC_címek_száma
+S1(config-if)# switchport port-security mac-address [MAC-cím] //aktív konfigban nem tárolja
+S1(config-if)# switchport port-security mac-address [MAC-cím] sticky //aktív konfigban is tárolja
+S1(config-if)# switchport port-security violation protect/restrict/shutdown
+S1# show port-security interface int_azon
+Shutdown violation móddal letiltott port visszakapcsolása:
+S1(config-if)# shutdown
+S1(config-if)# no shutdown
+
+ROUTER
+Jelszó visszaállítás:
+rommon 1 &gt;confreg 0x2142 //startup-config figyelmen kívül hagyása
+rommon 2 &gt;boot
+Újraindulás után:
+R1(config)# config-register 0x2102 //startup-config figyelembe vétele
+VLAN-ok közti forgalomirányítás:
+R1(config)# interface g0/0.10 //alinterfészre lépés
+R1(config-sub-if)#encapsulation dot1q VLAN_id
+R1(config-sub-if)#ip address ip-cím
+R1(config-sub-if)#interface g0/0
+R1(config-if)#no shutdown
+Statikus forgalomirányítás:
+R1(config)# ip route cél_hálózati_cím célh_alh_maszk következő ugrás_címe|kimenő int_azon
+R1(config)# ip route 0.0.0.0 0.0.0.0 következő ugrás_címe|kimenő int_azon //alapért. útvonal
+R1# show ip route
+ipv6:
+R1(config)# ipv6 route célhálózat_ipv6_előtag /előtaghossz következő ugrás_címe|kimenő int_azon
+R1(config)# ipv6 route ::/0 következő ugrás_címe|kimenő int_azon //alapért. útvonal
+R1# show ipv6 route
+RIP dinamikus forgalomirányítás:
+
+R1(config)# router rip
+R1(config-router)# version 2
+R1(config-router)# no auto-summary
+R1(config-router)# network helyi_hálózati_cím //helyi hálózat hirdetése
+R1(config-router)# default-information originate //alapértelmezett útvonal hirdetése
+R1(config-router)# passive interface kimenő_int_azon //ezen a kimenő interfészen nincs hirdetés
+R1#show ip protocols
+R1#show ip route rip
+
+RIPng ipv6:
+R1(config)# ipv6 unicast-routing
+R1(config)# interface int_azon
+R1(config-if)# ipv6 rip RIP-azonosító enable
+R1(config-if)# ipv6 rip RIP-azonosító default-information originate //alapért. útvonal hirdetése
+R1#show ipv6 protocols
+R1#show ipv6 route
+Egyterületű OSPF dinamikus forgalomirányítás:
+R1(config)# router ospf azonosító_szám
+R1(config-router)# router-id 32_bites_azonosító_pl: 1.1.1.1
+R1(config-router)# network helyi_hálózati_cím helyettesítő_ maszk area 0 //helyi hálózat hirdetése
+vagy
+R1(config-router)# network helyi_interfész_címe 0.0.0.0 area 0 //helyi interfész részt vesz az ospf
+folymatban
+R1(config-router)# auto-cost reference-bandwidth sávszél_Mbit-ben //referencia sávszélesség
+R1(config-router)# default-information originate //alapértelmezett útvonal hirdetése
+R1(config-router)# passive interface kimenő_int_azon //ezen a kimenő interfészen nincs hirdetés
+Router-id utólagos megváltoztatása esetén:
+R1(config)# clear ip ospf process
+R1#show ip protocols
+R1#show ip route ospf
+R1#show ip ospf
+R1#show ip ospf insterface int_azon
+R1#show ip ospf insterface brief
+R1#show ip ospf neighbor
+Manuális útvonalköltség beállítása: Az útvonal mindkét végén be kell állítani!!!
+R1(config)# interface int_ azon
+R1(config-if)# bandwidth sebesség_Kbit-ben //ebből számolja a költséget
+vagy
+R1(config-if)# ip ospf cost mérték_szám //nem számol költséget, a beállított mértéket használja
+
+OSPFv3 ipv6:
+R1(config)# ipv6 unicast-routing
+R1(config)# ipv6 router ospf ospf_azonosító_szám
+R1(config-rtr)# router-id 32_bites_azonosító_pl: 1.1.1.1
+R1(config-rtr)# auto-cost reference-bandwidth sávszél_Mbit-ben //referencia sávszélesség
+R1(config-rtr)# default-information originate //alapértelmezett útvonal hirdetése
+R1(config)# interface int_azon
+R1(config-if)# ipv6 ospf ospf_azonosító_szám area 0
+Router-id utólagos megváltoztatása esetén:
+R1(config)# clear ipv6 ospf process
+
+R1#show ipv6 protocols
+R1#show ipv6 route ospf
+R1#show ipv6 ospf
+R1#show ipv6 ospf insterface int_azon
+R1#show ipv6 ospf insterface brief
+R1#show ipv6 ospf neighbor
+
+Hozzáférési listák:
+Előbb mindig a host-okra vonatkozó engedélyek/tiltások, azután a hálózatokra vonatkozóak!
+Normál (1-99, 1300-1999):
+R1(config)# access-list 1 remark leírás
+R1(config)# access-list 1 permit/deny forrás_ip_cím 0.0.0.0
+vagy
+R1(config)# access-list 1 permit/deny host forrás_ip_cím
+R1(config)# access-list 1 permit/deny forrás_hálózati_cím helyettesítő_maszk
+R1(config)# access-list 1 permit any //minden más ip forgalom engedélyezése
+R1(config)# interface int_azon
+R1(config-if)#ip access-group 1 in/out
+R1(config)# line vty 0 15
+R1(config)# access-class 2 in //lehet kiterjesztettet is használni, de nincs rá szükség
+Kiterjesztett (100-199, 2000-2699): //forrás és cél egyaránt lehet host vagy hálózat is
+R1(config)# access-list 100 permit/deny protocol forrás_ip_cím 0.0.0.0 cél_ip_cím 0.0.0.0 eq p-szám
+vagy
+R1(config)# access-list 100 permit/deny protocol host forrás_ip_cím host cél_ip_cím eq p-szám
+R1(config)# access-list 100 permit/deny protocol forrás_hálózati_cím helyettesítő_maszk
+cél_hálózati_cím helyettesítő_maszk eq protocol-szám
+R1(config)# access-list 100 permit/deny tcp forrás_hálózati_cím helyettesítő_maszk host cél_ip_cím
+established //felépült tcp kapcsolatok forgalmának engedélyezése kifelé
+R1(config)# access-list 100 permit ip any any //minden más ip forgalom engedélyezése
+R1(config)# interface int_azon
+R1(config-if)#ip access-group 1 in/out
+Nevesített:
+R1(config)# ip access-list standard név //Normál
+R1(config-std-nacl)#remark leírás
+R1(config-std-nacl)#permit/deny forrás_cím
+R1(config)# interface int_azon
+R1(config-if)#ip acess-group név in/out
+
+R1(config)# ip access-list extended név //Kiterjesztett
+R1(config-std-nacl)#permit/deny protocol forrás_cím helyettesítő_maszk cél_cím helyettesítő_maszk
+eq protocol-szám
+R1(config)# interface int_azon
+R1(config-if)#ip access-group név in/out
+R1#show ip interface int_azon
+R1#show access-lists
+R1#show access-lists szám/név
+ipv6:
+R1(config)# ipv6 access-list név
+R1(config-ipv6-acl)#remark leírás
+R1(config-ipv6-acl)#permit/deny protocol forrás_cím cél_cím eq prot-szám
+R1(config-ipv6-acl)#permit/deny ipv6 forrás_cím cél_cím
+R1(config-ipv6-acl)#permit ipv6 any any //minden más ipv6 forgalom engedélyezése
+R1(config)# interface int_azon
+R1(config-if)# ipv6 traffic-filter név in/out
+R1#show ipv6 interface int_azon
+R1#show access-lists
+R1#show access-lists szám/név
+DHCPv4:
+R1(config)# ip dhcp excluded-address tartomány_kezdő_ip_címe tartomány_utolsó_címe //kizárás
+R1(config)# ip dhcp pool név
+R1(dhcp-config)# network hálózati_cím alh_maszk
+R1(dhcp-config)# default-router az_ alhálózat_alapért._átjárójának_ip_címe
+R1(dhcp-config)# dns-server dns_ip_címe
+R1(dhcp-config)# domain-name pelda.com
+Router interfésze dhcp-től kapjon ip-t:
+R1(config-if)#ip address dhcp
+Ha a DHCP szerver másik hálózati szegmensen van, akkor a DHCP DISCOVER-t fogadó interfészen meg
+kell adni a DHCP szerver címét:
+R1(config-if)# ip helper-address dhcp_szerver_ip_címe
+R1#show running-config | section dhcp
+R1#show ip dhcp binding
+R1#show ip dhcp server statistics
+R1#show ip dhcp conflict
+R1#debug ip dhcp server events
+
+DHCPv6:
+SLAAC:
+R1(config)# ipv6 unicast-routing
+R1(config)# interface g0/1
+R1(config-if)# no ipv6 nd managed-config-flag
+R1(config-if)# no ipv6 nd other-config-flag
+Állapotmentes DHCPv6:
+R1(config)# ipv6 unicast-routing
+R1(config)# ipv6 dhcp pool készlet-neve
+R1(config-dhcpv6)# dns-server ipv6cím
+R1(config-dhcpv6)# domain-name név
+R1(config-dhcpv6)# exit
+R1(config)# interface g0/1
+R1(config-if)# ipv6 address ipv6cím_if
+R1(config-if)# ipv6 dhcp server készlet-neve
+R1(config-if)# ipv6 nd other-config-flag
+router interface beállítása, hogy innen kapjon ip-t:
+R1(config)# interface g0/1
+R1(config-if)# ipv6 enable
+R1(config-if)# ipv6 address autoconfig
+Állapottartó DHCPv6:
+R1(config)# ipv6 unicast-routing
+R1(config)# ipv6 dhcp pool készlet-neve
+R1(config-dhcpv6)# ipv6 address ipv6_prefix/hossz lifetime infinite vagy x mp-ben
+R1(config-dhcpv6)# dns-server ipv6cím
+R1(config-dhcpv6)# domain-name név
+R1(config-dhcpv6)# exit
+R1(config)# interface g0/1
+R1(config-if)# ipv6 address ipv6cím_if
+R1(config-if)# ipv6 dhcp server készlet-neve
+R1(config-if)# ipv6 nd managed-config-flag
+router interface beállítása, hogy innen kapjon ip-t:
+R1(config)# interface g0/1
+R1(config-if)# ipv6 enable
+R1(config-if)# ipv6 address dhcp
+Ha a DHCP szerver másik hálózati szegmensen van, akkor a DHCP DISCOVER-t fogadó interfészen meg
+kell adni a DHCP szerver címét:
+R1(config-if)# ipv6 dhcp relay destination server_ipv6_cím
+R1#show ipv6 dhcp pool
+R1#show ipv6 dhcp binding
+R1#show ipv6 interface g0/1
+
+R1#debug ipv6 dhcp detail
+NAT:
+Statikus:
+R1(config)#ip nat inside source static belső_lokális_ip belső_globális_ip
+R1(config)#interface belső_int_azon
+R1(config)#ip nat inside
+R1(config)#interface külső_int_azon
+R1(config)#ip nat outside
+R1#show ip nat statistics
+R1#show ip nat translations
+Dinamikus:
+R1(config)#ip nat pool NÉV belső_globális_ip-tartomány_kezdőcíme belső_globális_ip-
+tartomány_utolsó_címe netmask alhálózati_maszk
+R1(config)#access-list 1 permit hálózati_cím helyettesítő_maszk
+R1(config)#ip nat inside source list 1 pool NÉV
+R1(config)#interface belső_int_azon
+R1(config)#ip nat inside
+R1(config)#interface külső_int_azon
+R1(config)#ip nat outside
+PAT 1 globális cím esetén:
+R1(config)#access-list 1 permit hálózati_cím helyettesítő_maszk
+R1(config)#ip nat inside source list 1 interface belső_lokális_int_azon overload
+R1(config)#interface belső_int_azon
+R1(config)#ip nat inside
+R1(config)#interface külső_int_azon
+R1(config)#ip nat outside
+PAT több globális cím esetén:
+R1(config)#ip nat pool NÉV belső_globális_ip-tartomány_kezdőcíme belső_globális_ip-
+tartomány_utolsó_címe netmask alhálózati_maszk
+R1(config)#access-list 1 permit hálózati_cím helyettesítő_maszk
+R1(config)#ip nat inside source list 1 pool NÉV overload
+R1(config)#interface belső_int_azon
+R1(config)#ip nat inside
+R1(config)#interface külső_int_azon
+R1(config)#ip nat outside
+Port továbbítás/fordítás:
+R1(config)#ip nat inside source static tcp/udp belső_lokális_ip-cím forrás_portszám
+belső_globális_ip-cím cél_portszám //forrás porttal küldött csomagokat a célportra fordítja
+R1(config)#interface belső_int_azon
+R1(config)#ip nat inside
+R1(config)#interface külső_int_azon
+R1(config)#ip nat outside
